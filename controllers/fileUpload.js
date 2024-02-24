@@ -37,10 +37,15 @@ function isFileTypeSupported(type, supportedTypes){
 }
 
 async function uploadFileToCloudinary(file, folder){
-    const options = {folder};
+    const options = {folder,
+                        resource_type: "video",
+    };
     console.log("temp file path", file.tempFilePath);
+    options.resourse_type = "auto";
     return await cloudinary.uploader.upload(file.tempFilePath, options);
 }
+
+
 
 //image upload ka handler
 exports.imageUpload = async(req, res) => {
@@ -88,6 +93,61 @@ exports.imageUpload = async(req, res) => {
         res.status(400).json({
             success: false,
             message: 'Something went wrong',
+        });
+    }
+}
+
+
+
+//video upload ka handler
+exports.videoUpload = async(req, res) => {
+    try{
+        //data fetch
+        const {name, tags, email} = req.body;
+        console.log(name, tags, email);
+        
+        const file = req.files.videoFile;
+        console.log(file);
+        
+        //valodation
+        const supportedTypes = ["mp4", "mkv", "mov"];
+        const fileType = file.name.split('.')[1].toLowerCase();
+        console.log("File Type: ", fileType);
+        
+        //TODO: add an upper limit of 5MB
+        
+        
+        if(!isFileTypeSupported(fileType, supportedTypes)){
+            return res.status(400).json({
+                success: false,
+                message: 'File format not supported',
+            })
+        }
+        
+        //now, file types supported
+        console.log("Uploaded to fileupload_backend");
+        const response = await uploadFileToCloudinary(file, "fileupload_backend");
+        console.log(response);
+        
+        const fileData = await File.create({
+            name,
+            tags, 
+            email,
+            imageUrl: response.secure_url,
+        });
+        
+        res.json({
+            success: true,
+            videoUrl: response.secure_url,
+            message: "Video successfully uploaded",
+        })
+        
+    }
+    catch(error){
+        console.error(error);
+        res.status(400).json({
+            success:false,
+            message: 'Something went wrongg'
         });
     }
 }
